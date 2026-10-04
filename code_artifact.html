@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ブラウザ表示サイズ計測 (Viewport Size Checker)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Noto+Sans+JP:wght@400;500;700&display=swap');
+        
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+        }
+        
+        .font-mono-num {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* カスタムアニメーションとグラデーション効果 */
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .pulse-glow {
+            box-shadow: 0 0 50px -10px rgba(59, 130, 246, 0.3);
+        }
+
+        .toast-animate {
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between items-center p-4 sm:p-8 select-none overflow-x-hidden">
+
+    <!-- Top Bar / Header -->
+    <header class="w-full max-w-2xl flex justify-between items-center py-2 px-4 rounded-xl glass-card text-xs sm:text-sm text-slate-400">
+        <div class="flex items-center gap-2">
+            <i class="fa-solid font-bold fa-expand text-blue-400"></i>
+            <span class="font-semibold text-slate-300">Viewport Monitor</span>
+        </div>
+        <div id="deviceType" class="flex items-center gap-1.5 bg-slate-800/80 px-2.5 py-1 rounded-lg text-slate-300">
+            <i class="fa-solid fa-desktop text-blue-400"></i>
+            <span id="deviceLabel">デスクトップ</span>
+        </div>
+    </header>
+
+    <main class="my-auto w-full max-w-xl flex flex-col items-center justify-center">
+        <!-- Main Card Container -->
+        <div class="w-full glass-card pulse-glow rounded-3xl p-6 sm:p-10 text-center relative overflow-hidden transition-all duration-300">
+            
+            <!-- Context Badge -->
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 text-xs font-medium mb-6">
+                <span class="w-2 h-2 rounded-full bg-blue-400 animate-ping"></span>
+                <span id="modeBadge">Pixel Size (px)</span>
+            </div>
+
+            <div class="flex items-center justify-center gap-2 sm:gap-4 my-2">
+                <!-- Width -->
+                <div class="flex flex-col items-center">
+                    <span id="widthDisplay" class="font-mono-num text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white transition-all">
+                        0
+                    </span>
+                    <span class="text-xs sm:text-sm text-slate-400 mt-1">横幅 (Width)</span>
+                </div>
+
+                <!-- Separator / Multiply Sign -->
+                <div class="text-2xl sm:text-4xl text-slate-600 font-light mb-6 px-1">
+                    &times;
+                </div>
+
+                <!-- Height -->
+                <div class="flex flex-col items-center">
+                    <span id="heightDisplay" class="font-mono-num text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-blue-400 transition-all">
+                        0
+                    </span>
+                    <span class="text-xs sm:text-sm text-slate-400 mt-1">高さ (Height)</span>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-center gap-3 mt-8">
+                <!-- Copy Button -->
+                <button onclick="copySize()" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition duration-200 shadow-lg shadow-blue-600/30">
+                    <i class="fa-regular fa-copy"></i>
+                    <span>サイズをコピー</span>
+                </button>
+
+                <!-- Toggle Unit Button -->
+                <button onclick="toggleUnit()" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 text-sm font-semibold px-4 py-2.5 rounded-xl border border-slate-700 transition duration-200">
+                    <i class="fa-solid fa-arrows-rotate text-slate-400"></i>
+                    <span id="unitToggleBtnText">CSS単位 (100vw / 100vh)</span>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-8 pt-6 border-t border-slate-800/80 text-left text-xs">
+                <div class="bg-slate-900/50 p-2.5 rounded-lg border border-slate-800/50">
+                    <div class="text-slate-500 mb-0.5">アスペクト比</div>
+                    <div id="aspectRatio" class="font-mono-num font-semibold text-slate-200">-</div>
+                </div>
+                <div class="bg-slate-900/50 p-2.5 rounded-lg border border-slate-800/50">
+                    <div class="text-slate-500 mb-0.5">Device Pixel Ratio</div>
+                    <div id="dprDisplay" class="font-mono-num font-semibold text-slate-200">-</div>
+                </div>
+                <div class="bg-slate-900/50 p-2.5 rounded-lg border border-slate-800/50 col-span-2 sm:col-span-1">
+                    <div class="text-slate-500 mb-0.5">画面解像度 (Screen)</div>
+                    <div id="screenRes" class="font-mono-num font-semibold text-slate-200">-</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 translate-y-20 opacity-0 pointer-events-none glass-card bg-slate-800/90 text-white px-5 py-3 rounded-full shadow-2xl border border-slate-700/80 flex items-center gap-3 toast-animate z-50">
+        <i class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+        <span id="toastMessage" class="text-sm font-medium">クリップボードにコピーしました</span>
+    </div>
+
+    <!-- Footer -->
+    <footer class="text-xs text-slate-500 text-center py-2">
+        <p>リアルタイムでウィンドウリサイズ（resizeイベント）を検知中</p>
+    </footer>
+
+    <script>
+        // 表示モード状態 (px または css/vwvh)
+        let displayMode = 'px'; // 'px' | 'vwvh'
+
+        // DOM要素
+        const widthDisplay = document.getElementById('widthDisplay');
+        const heightDisplay = document.getElementById('heightDisplay');
+        const modeBadge = document.getElementById('modeBadge');
+        const unitToggleBtnText = document.getElementById('unitToggleBtnText');
+        const aspectRatioDisplay = document.getElementById('aspectRatio');
+        const dprDisplay = document.getElementById('dprDisplay');
+        const screenResDisplay = document.getElementById('screenRes');
+        const deviceLabel = document.getElementById('deviceLabel');
+        const deviceTypeIcon = document.querySelector('#deviceType i');
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toastMessage');
+
+        // 最大公約数を計算（アスペクト比計算用）
+        function gcd(a, b) {
+            return b === 0 ? a : gcd(b, a % b);
+        }
+
+        function updateSize() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+
+            // 数値表示のアップデート
+            if (displayMode === 'px') {
+                widthDisplay.textContent = width;
+                heightDisplay.textContent = height;
+            } else {
+                widthDisplay.textContent = '100vw';
+                heightDisplay.textContent = '100vh';
+            }
+
+            // アスペクト比の計算
+            const divisor = gcd(width, height);
+            const aspectW = Math.round((width / divisor) * 100) / 100;
+            const aspectH = Math.round((height / divisor) * 100) / 100;
+            
+            // シンプルな整数比になればそれを表示、複雑なら近似比
+            if (width / divisor < 100 && height / divisor < 100) {
+                aspectRatioDisplay.textContent = `${width / divisor}:${height / divisor}`;
+            } else {
+                const ratio = (width / height).toFixed(2);
+                aspectRatioDisplay.textContent = `${ratio}:1`;
+            }
+
+            // DPR (Device Pixel Ratio)
+            const dpr = window.devicePixelRatio || 1;
+            dprDisplay.textContent = `${dpr}x`;
+
+            // スクリーン全体解像度
+            screenResDisplay.textContent = `${window.screen.width} × ${window.screen.height}`;
+
+            // デバイス種類の簡易判定（幅ベース）
+            if (width < 640) {
+                deviceLabel.textContent = 'モバイル (Mobile)';
+                deviceTypeIcon.className = 'fa-solid fa-mobile-screen text-blue-400';
+            } else if (width < 1024) {
+                deviceLabel.textContent = 'タブレット (Tablet)';
+                deviceTypeIcon.className = 'fa-solid fa-tablet-screen-button text-blue-400';
+            } else {
+                deviceLabel.textContent = 'デスクトップ (Desktop)';
+                deviceTypeIcon.className = 'fa-solid fa-desktop text-blue-400';
+            }
+        }
+
+        function toggleUnit() {
+            if (displayMode === 'px') {
+                displayMode = 'vwvh';
+                modeBadge.textContent = 'CSS Viewport Units';
+                unitToggleBtnText.textContent = 'ピクセル表示 (px) に戻す';
+            } else {
+                displayMode = 'px';
+                modeBadge.textContent = 'Pixel Size (px)';
+                unitToggleBtnText.textContent = 'CSS単位 (100vw / 100vh)';
+            }
+            updateSize();
+        }
+
+        function copySize() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            const textToCopy = `${width}px x ${height}px`;
+
+            // iFrame内でも確実に動くコピー実装
+            const textarea = document.createElement('textarea');
+            textarea.value = textToCopy;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+
+            try {
+                document.execCommand('copy');
+                showToast(`サイズ "${textToCopy}" をコピーしました！`);
+            } catch (err) {
+                showToast('コピーに失敗しました');
+            } finally {
+                document.body.removeChild(textarea);
+            }
+        }
+
+        // Toast通知表示
+        let toastTimeout;
+        function showToast(msg) {
+            toastMessage.textContent = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2500);
+        }
+
+        // イベントリスナーの登録
+        window.addEventListener('resize', updateSize);
+        window.addEventListener('orientationchange', updateSize);
+
+        // 初期化実行
+        window.onload = function() {
+            updateSize();
+        };
+    </script>
+</body>
+</html>
